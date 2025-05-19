@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head><script src="https://cdn.tailwindcss.com"></script>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Exam Paper Creator</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+<style>
+    .hidden { display: none; }
+    .profile-pic {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    /* यह वह CSS ब्लॉक है जिसे प्रिंटिंग के लिए अपडेट किया गया है */
+    @media print {
+      body * {
+        visibility: hidden; /* Hide everything by default */
+      }
+      #printArea,
+      #printArea * {
+        visibility: visible; /* Make print area and its descendants visible */
+      }
+      #printArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        display: block; /* Ensure the print area container is a block */
+        margin: 0;
+        padding: 15mm;
+        border: 4px solid red; /* पेपर के चारों ओर लाल बॉर्डर (4px मोटाई) */
+        box-sizing: border-box;
+      }
+
+      /* Ensure specific block/structural elements within printArea are block */
+      #examLogo,
+      #examSchool, /* h2 */
+      #examHeader, /* h3 */
+      #examQuestions, /* div */
+      #examFooter, /* p */
+      #printArea hr {
+          display: block !important;
+          /* visibility is handled by #printArea * */
+      }
+
+      /* Style for School Name heading */
+      #examSchool {
+          border: 2px solid blue;
+          padding: 5px 10px;
+          display: inline-block !important; /* School name was inline-block before for centering */
+          margin-top: 10px;
+          margin-bottom: 5px; /* Reduced bottom margin to bring Class closer */
+          color: initial; /* School name color back to default/inherited in print */
+      }
+
+      /* Style for the divs holding Class and Subject (centered) */
+      #printArea .header-centered-line {
+          display: block !important; /* Ensure these divs are blocks in print */
+          text-align: center !important; /* Align text center */
+          margin-bottom: 5px !important; /* Space below each line */
+          /* visibility is handled by #printArea * */
+      }
+
+      /* Style for the Flex container holding Time (left) and Marks (right) */
+      #printArea .flex.justify-between.items-center {
+           display: flex !important; /* MAKE THIS FLEX IN PRINT */
+           justify-content: space-between !important;
+           align-items: center !important;
+           width: 100% !important;
+           margin-top: 10px !important; /* Add space above this line */
+           margin-bottom: 15px !important; /* Space below this flex line before HR */
+           /* The child divs will naturally be flex items */
+           /* visibility is handled by #printArea * */
+      }
+
+       /* Ensure the left and right divs inside the flex container are visible */
+       #printArea .flex.justify-between.items-center > div {
+           visibility: visible !important;
+           /* display property for these divs is handled by the flex parent (flex item) */
+       }
+
+
+      /* Ensure spans inside header info lines are visible and inline */
+      #printArea .header-centered-line span,
+      #printArea .flex.justify-between.items-center span {
+          visibility: visible !important;
+          display: inline !important; /* Spans are inline */
+      }
+
+      /* Style for the data spans (Class, Subject, Time, Marks values) */
+      #examClass, #examSubject, #examTime, #examMaxMarks {
+          font-weight: bold; /* Keep bold */
+          color: green !important; /* Keep green color */
+      }
+
+      /* Style for the labels (Class:, Subject:, Time:, Max Marks:) */
+      #printArea .header-centered-line strong,
+      #printArea .flex.justify-between.items-center strong {
+          color: green !important; /* Make the labels green */
+          font-weight: bold !important; /* Ensure the labels are bold */
+      }
+
+
+       /* Ensure question paragraphs are visible and block */
+      #examQuestions p {
+          display: block !important;
+          visibility: visible !important;
+          margin-bottom: 10px !important;
+      }
+       #examQuestions strong { /* Ensure strong tags inside questions are visible */
+          visibility: visible !important;
+       }
+
+       /* The watermark */
+      #examWatermark {
+          position: fixed !important; /* Keep fixed positioning for watermark */
+          display: block !important;
+          visibility: visible !important;
+          top: 50% !important;
+          left: 50% !important;
+          transform: translate(-50%, -50%) rotate(-45deg) !important;
+          font-size: 5em !important;
+          color: rgba(128, 128, 128, 0.15) !important;
+          z-index: -1;
+          pointer-events: none;
+      }
+    }
+  </style>
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet"/><script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script><style>
+@keyframes fadeIn {
+  0% { opacity: 0; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.animate-fadeIn {
+  animation: fadeIn 1s ease-out;
+}
+.dark body {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+.dark header {
+  background: linear-gradient(to right, #333, #555);
+}
+.dark .bg-white {
+  background-color: #1e1e1e !important;
+}
+.dark input, .dark select, .dark textarea {
+  background-color: #2e2e2e !important;
+  color: #fff !important;
+}
+</style><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&amp;display=swap" rel="stylesheet"/><style>body { font-family: 'Poppins', sans-serif; }</style></head>
+<body class="bg-gradient-to-br from-purple-600 via-pink-500 to-yellow-400 bg-gray-100">
+<div class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50" id="splashScreen">
+<img alt="Smart Exam Logo" class="w-20 h-20 mb-4 rounded-full shadow-md" src="https://cdn-icons-png.flaticon.com/512/3135/3135755.png"/>
+<h1 class="text-2xl font-bold text-blue-800 animate-fadeIn">Smart Exam Generator</h1>
+</div>
+<header class="bg-gradient-to-r from-blue-800 to-purple-700 text-white py-6 mb-6 shadow-md">
+<div class="container mx-auto flex flex-col items-center justify-center text-center px-4">
+<img alt="Smart Exam Logo" class="w-20 h-20 mb-4 rounded-full shadow-md" src="https://cdn-icons-png.flaticon.com/512/3135/3135755.png"/>
+<div class="mt-2 flex gap-2 justify-center">
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" onclick="toggleLanguage()">Switch Language</button>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" onclick="toggleTheme()">Switch Theme</button>
+</div>
+<h1 class="text-3xl font-bold">Smart Exam Generator</h1>
+<p class="text-sm text-purple-100 mt-1">Create, Customize, and Print Exam Papers Effortlessly</p>
+</div>
+<div class="absolute top-4 right-4 flex gap-2">
+</div>
+</header>
+<!-- Admin Login Page -->
+<div class="hidden min-h-screen flex items-center justify-center bg-gray-100" id="adminLogin">
+<div class="bg-white shadow-lg rounded p-8 w-full max-w-md">
+<h2 class="text-2xl font-bold mb-4 text-center text-red-700">Admin Login</h2>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="adminUsername" placeholder="Admin Username" type="text"/>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="adminPassword" placeholder="Password" type="password"/>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-700" onclick="loginAdmin()">Login</button>
+<div class="text-sm text-center mt-4">
+<a class="text-blue-500" href="#" onclick="showLogin()">User Login</a>
+</div>
+</div>
+</div>
+<!-- Admin Panel -->
+<div class="hidden p-6 bg-gray-50 min-h-screen" id="adminPanel">
+<div class="flex justify-between items-center mb-4">
+<h2 class="text-xl font-bold text-red-700">Admin Panel - Question Bank Manager</h2>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-red-500" onclick="logoutAdmin()">Logout</button>
+</div>
+<div class="border p-4 bg-white rounded mb-6 r o u n d e d - x l s h a d o w b g - w h i t e p - 4 m b - 4">
+<h3 class="font-bold text-lg mb-2 text-blue-700">Add New Question</h3>
+<div class="border p-2 bg-white mb-2 r o u n d e d - x l s h a d o w b g - w h i t e p - 4 m b - 4" id="adminEditor" style="height: 100px;"></div>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="adminClass" placeholder="Class"/>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="adminSubject" placeholder="Subject"/>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="adminSection" placeholder="Section"/>
+<select class="border p-2 w-full mb-2" id="adminType">
+<option value="MCQ">MCQ</option>
+<option value="Short">Short Answer</option>
+<option value="Long">Long Answer</option>
+<option value="Fill">Fill in the Blank</option>
+<option value="TrueFalse">True / False</option>
+</select>
+<select class="border p-2 w-full mb-2" id="adminDifficulty">
+<option value="Easy">Easy</option>
+<option value="Medium">Medium</option>
+<option value="Hard">Hard</option>
+</select>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="adminMarks" placeholder="Marks" type="number"/>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" onclick="addAdminQuestion()">Add to Bank</button>
+</div>
+<div class="border p-4 bg-white rounded mb-4 r o u n d e d - x l s h a d o w b g - w h i t e p - 4 m b - 4">
+<h3 class="font-bold text-md mb-2 text-gray-700">Filter / Search Questions</h3>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="filterClass" placeholder="Filter by Class"/>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="filterSubject" placeholder="Filter by Subject"/>
+<select class="border p-2 w-full" id="filterType">
+<option value="">All Types</option>
+<option value="MCQ">MCQ</option>
+<option value="Short">Short Answer</option>
+<option value="Long">Long Answer</option>
+<option value="Fill">Fill in the Blank</option>
+<option value="TrueFalse">True / False</option>
+</select>
+<select class="border p-2 w-full" id="filterDifficulty">
+<option value="">All Levels</option>
+<option value="Easy">Easy</option>
+<option value="Medium">Medium</option>
+<option value="Hard">Hard</option>
+</select>
+</div>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="searchText" placeholder="Search text..."/>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" onclick="loadAdminQuestions()">Apply Filters</button>
+</div>
+<div class="border p-4 bg-white rounded mb-6 r o u n d e d - x l s h a d o w b g - w h i t e p - 4 m b - 4">
+<h3 class="font-bold text-lg mb-2 text-indigo-700">Admin Tools: Export / Import / Stats</h3>
+<div class="flex flex-wrap gap-2 mb-2">
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-gray-800" onclick="exportAdminBank()">Export Admin Bank</button>
+<input accept=".json" class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="importAdminFile" type="file"/>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-gray-800" onclick="importAdminBank()">Import Admin Bank</button>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" onclick="showAdminStats()">Show Stats</button>
+</div>
+<div class="text-sm text-gray-700 mt-4" id="adminStats"></div>
+</div>
+<div class="space-y-2" id="adminQuestionList">
+<!-- Questions will appear here -->
+</div>
+</div>
+<!-- Login Page -->
+<div class="min-h-screen flex items-center justify-center" id="loginPage">
+<div class="bg-white shadow-lg rounded p-8 w-full max-w-md">
+<h2 class="text-2xl font-bold mb-4 text-center text-blue-700">Login</h2>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="loginUsername" placeholder="Username" type="text"/>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="loginPassword" placeholder="Password" type="password"/>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-700" onclick="loginUser()">Login</button>
+<div class="text-sm text-center mt-4">Don't have an account?
+      <a class="text-blue-500" href="#" onclick="showRegister()">Register</a>
+</div>
+</div>
+<div class="mt-4 text-center">
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-700" onclick="showAdminLogin()">
+    Admin Login
+  </button>
+</div>
+<div class="text-center mt-2"></div></div>
+<!-- Register Page -->
+<div class="hidden min-h-screen flex items-center justify-center" id="registerPage">
+<div class="bg-white shadow-lg rounded p-8 w-full max-w-md">
+<h2 class="text-2xl font-bold mb-4 text-center text-green-700">Register</h2>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="registerUsername" placeholder="Username" type="text"/>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="registerPassword" placeholder="Password" type="password"/>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="registerPic" placeholder="Profile Picture URL" type="text"/>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-green-700" onclick="registerUser()">Register</button>
+<div class="text-sm text-center mt-4">Already have an account?
+      <a class="text-blue-500" href="#" onclick="showLogin()">Login</a>
+</div>
+</div>
+</div>
+<!-- Main App -->
+<div class="flex justify-end mb-4">
+</div>
+<div class="hidden p-6" id="mainApp">
+<div class="flex justify-end mb-4">
+</div>
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center space-x-4">
+<img alt="Profile" class="profile-pic" id="profilePic" src=""/>
+<div>
+<h3 class="font-bold text-lg" id="profileName"></h3>
+<!-- यह एलिमेंट्स उपयोगकर्ता संख्या दिखाएंगे -->
+<div class="text-sm text-gray-600">
+            Total Registered Users: <span id="totalRegisteredCount">0</span>
+</div>
+<div class="text-sm text-gray-600">
+            Currently Logged In (on this device): <span id="onlineCount">0</span>
+</div>
+</div>
+</div>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-red-500" onclick="logoutUser()">Logout</button>
+</div>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" data-en="Create Exam Paper" data-hi="परीक्षा पत्र बनाएँ" data-pa="ਪ੍ਰੀਖਿਆ ਪੇਪਰ ਬਣਾਓ" onclick="showExamCreator()">
+    Create Exam Paper
+  </button>
+</div>
+<!-- Exam Creator -->
+<div class="hidden p-6" id="examCreator">
+<div class="flex justify-between items-center mb-4">
+<h2 class="text-xl font-bold text-green-700">Exam Paper Builder</h2>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" data-en="Back" data-hi="वापस" data-pa="ਵਾਪਸ" onclick="backToProfile()">Back</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" data-en="Academic Session (e.g. 2024-25)" data-hi="शैक्षणिक सत्र (जैसे 2024-25)" data-pa="ਅਕਾਦਮਿਕ ਸੈਸ਼ਨ (ਉਦਾਹਰਨ 2024-25)" id="academicSession" placeholder="Academic Session (e.g. 2024-25)" type="text"/>
+<label data-en="Instructions:" data-hi="निर्देश:" data-pa="ਹਦਾਇਤਾਂ:" for="instructionEditor">Instructions:</label><div class="border p-2 bg-white mb-2 r o u n d e d - x l s h a d o w b g - w h i t e p - 4 m b - 4" id="instructionEditor" style="height: 100px;"></div>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" data-en="School Name" data-hi="विद्यालय का नाम" data-pa="ਸਕੂਲ ਦਾ ਨਾਮ" id="schoolName" placeholder="School Name" type="text"/>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" data-en="Class" data-hi="कक्षा" data-pa="ਕਲਾਸ" id="className" placeholder="Class" type="text"/>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" data-en="Subject" data-hi="विषय" data-pa="ਵਿਸ਼ਾ" id="subjectName" placeholder="Subject" type="text"/>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" data-en="Time Limit" data-hi="समय सीमा" data-pa="ਸਮਾਂ ਸੀਮਾ" id="timeLimit" placeholder="Time Limit" type="text"/>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" data-en="Maximum Marks" data-hi="कुल अंक" data-pa="ਅਧਿਕਤਮ ਅੰਕ" id="maxMarks" placeholder="Maximum Marks" type="text"/>
+<label data-en="Header:" data-hi="शीर्षक:" data-pa="ਸਿਰਲੇਖ:" for="headerEditor">Header:</label><div class="border p-2 bg-white mb-2 r o u n d e d - x l s h a d o w b g - w h i t e p - 4 m b - 4" id="headerEditor" style="height: 60px;"></div>
+<label data-en="Footer:" data-hi="फुटर:" data-pa="ਫੁੱਟਰ:" for="footerEditor">Footer:</label><div class="border p-2 bg-white mb-2 r o u n d e d - x l s h a d o w b g - w h i t e p - 4 m b - 4" id="footerEditor" style="height: 60px;"></div>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="watermarkText" placeholder="Watermark Text" type="text"/>
+<input accept="image/*" class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="logoUpload" type="file"/>
+<label data-en="Examination Type:" data-hi="परीक्षा प्रकार:" data-pa="ਇਮਤਿਹਾਨ ਦੀ ਕਿਸਮ:" for="examType">Examination Type:</label><input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="examType" placeholder="Enter Examination Type" type="text"/><input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" data-en="Enter link for QR code (e.g., answer key URL)" data-hi="QR कोड लिंक (जैसे उत्तर कुंजी)" data-pa="QR ਕੋਡ ਲਿੰਕ (ਉੱਤਰ ਕੁੰਜੀ ਲਈ)" id="qrLink" placeholder="Enter link for QR code (e.g., answer key URL)" type="text"/></div>
+<!-- Page Layout Options -->
+<div class="border rounded p-4 bg-gray-50 mb-4 r o u n d e d - x l s h a d o w b g - w h i t e p - 4 m b - 4">
+<h3 class="font-semibold text-md mb-2 text-blue-700">Page Layout Options</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+<label>Page Size:
+      <select class="border p-1 w-full" id="pageSize">
+<option value="A4">A4</option>
+<option value="A5">A5</option>
+</select>
+</label>
+<label>Orientation:
+      <select class="border p-1 w-full" id="pageOrientation">
+<option value="portrait">Portrait</option>
+<option value="landscape">Landscape</option>
+</select>
+</label>
+<label>Font Size:
+      <select class="border p-1 w-full" id="pageFontSize">
+<option value="text-sm">Small</option>
+<option selected="" value="text-base">Medium</option>
+<option value="text-lg">Large</option>
+</select>
+</label>
+<label>Show Page Border:
+      <select class="border p-1 w-full" id="pageBorderToggle">
+<option selected="" value="yes">Yes</option>
+<option value="no">No</option>
+</select>
+</label>
+</div>
+</div>
+<div class="mb-4">
+<div class="mb-4 flex gap-2">
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-green-600" onclick="saveTemplate()">Save Template</button>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" onclick="loadTemplate()">Load Template</button>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" onclick="exportToExcel()">Export to Excel</button>
+</div>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="questionSection" placeholder="Section (e.g., A, B, C)"/><select class="border p-2 w-full mb-2" id="questionDifficulty"><option value="Easy">Easy</option><option value="Medium">Medium</option><option value="Hard">Hard</option></select>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="sectionInstruction" placeholder="Section Instructions (optional)"/>
+<label>Question:</label>
+<div class="border rounded p-4 bg-gray-50 mb-4 r o u n d e d - x l s h a d o w b g - w h i t e p - 4 m b - 4">
+<h3 class="font-semibold text-md mb-2 text-purple-700">AI Question Generator (Mock)</h3>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="aiTopic" placeholder="Enter Topic (e.g., Algebra)"/>
+<select class="border p-2 w-full mb-2" id="aiType">
+<option value="MCQ">MCQ</option>
+<option value="Short">Short Answer</option>
+<option value="Long">Long Answer</option>
+</select>
+<select class="border p-2 w-full mb-2" id="aiDifficulty">
+<option value="Easy">Easy</option>
+<option value="Medium">Medium</option>
+<option value="Hard">Hard</option>
+</select>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" onclick="generateAIQuestion()">Generate Question</button>
+</div>
+<div class="border p-2 bg-white mb-2 r o u n d e d - x l s h a d o w b g - w h i t e p - 4 m b - 4" id="editor" style="height: 150px;"></div>
+<select class="border p-2 w-full mb-2" id="questionType">
+<option value="MCQ">MCQ</option>
+<option value="Short">Short Answer</option>
+<option value="Long">Long Answer</option>
+<option value="Fill">Fill in the Blank</option>
+<option value="TrueFalse">True / False</option>
+</select>
+<input accept="image/*" class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="questionImage" type="file"/>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="questionMarks" placeholder="Marks" type="number"/>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" onclick="addQuestion()">Add Question</button>
+</div>
+<div class="mb-4 flex gap-2">
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-green-600" onclick="saveToBank()">Save to Question Bank</button>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" onclick="loadFromBank()">Load from Question Bank</button>
+</div>
+<div class="mb-6 space-y-4">
+<div class="border p-4 rounded bg-gray-50 r o u n d e d - x l s h a d o w b g - w h i t e p - 4 m b - 4">
+<h3 class="font-bold mb-2 text-blue-700">Paper Actions</h3>
+<div class="flex flex-wrap gap-2">
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" onclick="generateExamPaper()">Generate Exam Paper Preview</button>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-red-600" onclick="downloadAsPDF()">Download as PDF</button>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-indigo-600" onclick="downloadAsWord()">Download as Word</button>
+<div class="mb-4">
+<label class="font-semibold">Generate Multiple Sets:</label>
+<select class="border p-2 w-full mb-2" id="paperSetCount">
+<option value="1">1 Set</option>
+<option value="2">2 Sets (A &amp; B)</option>
+<option value="3">3 Sets (A, B &amp; C)</option>
+</select>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" onclick="generateMultipleSets()">Generate Sets</button>
+</div>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-purple-700" onclick="window.print()">Print / Save PDF</button>
+</div>
+</div>
+<div class="border p-4 rounded bg-gray-50 r o u n d e d - x l s h a d o w b g - w h i t e p - 4 m b - 4">
+<h3 class="font-bold mb-2 text-green-700">Question Data Tools</h3>
+<div class="flex flex-wrap gap-2 items-center">
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" onclick="exportQuestions()">Export Questions (JSON)</button>
+<input accept=".json" class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="importFile" type="file"/>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" onclick="importQuestions()">Import Questions</button>
+</div>
+</div>
+<div class="border p-4 rounded bg-gray-50 r o u n d e d - x l s h a d o w b g - w h i t e p - 4 m b - 4">
+<h3 class="font-bold mb-2 text-purple-700">Question Bank</h3>
+<div class="flex flex-wrap gap-2">
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-green-600" onclick="saveToBank()">Save to Question Bank</button>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" onclick="loadFromBank()">Load from Question Bank</button>
+</div>
+</div>
+<div class="border p-4 rounded bg-gray-50 r o u n d e d - x l s h a d o w b g - w h i t e p - 4 m b - 4">
+<h3 class="font-bold mb-2 text-pink-700">AI Question Generator</h3>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="aiTopic" placeholder="Enter Topic (e.g., Algebra)"/>
+<select class="border p-2 w-full mb-2" id="aiType">
+<option value="MCQ">MCQ</option>
+<option value="Short">Short Answer</option>
+<option value="Long">Long Answer</option>
+</select>
+<select class="border p-2 w-full mb-2" id="aiDifficulty">
+<option value="Easy">Easy</option>
+<option value="Medium">Medium</option>
+<option value="Hard">Hard</option>
+</select>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" onclick="generateAIQuestion()">Generate Question</button>
+</div>
+</div>
+<div class="mb-4">
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-gray-800" onclick="openAdminBankSelector()">
+    Insert from Admin Question Bank
+  </button>
+</div>
+<div class="space-y-3 mb-4" id="questionList"></div><div class="text-right font-bold text-green-700" id="totalMarksDisplay">Total Marks: 0</div>
+<div class="mb-4 flex gap-2">
+</div>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-purple-700" onclick="window.print()">
+    Print / Save PDF
+  </button>
+</div>
+<!-- Exam Paper -->
+<div class="hidden bg-white p-6 m-4 shadow-md border r o u n d e d - x l s h a d o w b g - w h i t e p - 4 m b - 4" id="printArea">
+<div class="flex justify-between my-4">
+<div><strong>Name:</strong> ____________________</div>
+<div><strong>Roll No:</strong> ____________________</div>
+</div>
+<div class="text-center mb-4">
+<img alt="Smart Exam Logo" class="w-20 h-20 mb-4 rounded-full shadow-md" id="examLogo" src="https://cdn-icons-png.flaticon.com/512/3135/3135755.png"/>
+<h2 class="text-xl font-bold text-red-600" id="examSchool"></h2>
+<!-- UPDATED STRUCTURE FOR HEADER INFO -->
+<div class="header-centered-line"> <!-- Div for Class, centered -->
+<strong>Class:</strong> <span id="examClass"></span> <!-- Added strong tag around label -->
+</div><div class="header-centered-line"><strong>Exam Type:</strong> <span id="examTypeOutput"></span></div>
+<div class="header-centered-line"> <!-- Div for Subject, centered -->
+<div class="header-centered-line"> <!-- Div for Academic Session, centered -->
+<strong>Academic Session:</strong> <span id="examSession" style="color: green; font-weight: bold;"></span>
+</div>
+<strong>Subject:</strong> <span id="examSubject"></span> <!-- Added strong tag around label -->
+</div>
+<div class="flex justify-between items-center"> <!-- Flex container for Time and Marks -->
+<div class="text-left">
+<strong>Time:</strong> <span id="examTime"></span> <!-- Added strong tag around label -->
+</div>
+<div class="text-right">
+<strong>Max Marks:</strong> <span id="examMaxMarks"></span> <!-- Added strong tag around label -->
+</div>
+</div>
+<!-- END UPDATED STRUCTURE -->
+</div>
+<div class="my-2">
+<strong>Instructions:</strong>
+<p class="text-sm italic text-gray-700 mt-1" id="examInstructions"></p>
+</div>
+<hr class="my-2"/>
+<h3 class="text-center font-semibold mb-4" id="examHeader"></h3>
+<div class="space-y-2 mb-4" id="examQuestions"></div>
+<div class="my-2">
+<strong>Instructions:</strong>
+<p class="text-sm italic text-gray-700 mt-1" id="examInstructions"></p>
+</div>
+<hr class="my-2"/>
+<p class="text-center mt-4 text-sm" id="examFooter"></p>
+<div class="fixed bottom-10 right-10 text-gray-400 opacity-30 text-5xl pointer-events-none" id="examWatermark"></div>
+<div class="my-4">
+<strong>Teacher's Note:</strong>
+<p class="italic text-sm text-gray-700 mt-1" id="teacherNote"></p>
+</div>
+<div class="flex justify-between mt-6">
+<div></div>
+<div class="text-right">
+<p class="italic">Signature</p>
+<div class="border-t border-gray-600 w-40 mt-2"></div>
+</div>
+</div>
+<div class="text-center mt-6" id="qrCodeBox">Scan the QR code for the answer key</div></div>
+<script>
+// Load users immediately when script starts
+let users = JSON.parse(localStorage.getItem('users')) || {};
+// Question list for the current paper
+let questions = [];
+
+// यह फ़ंक्शन उपयोगकर्ता गणना को अपडेट करता है
+function updateUserCounts() {
+    const totalRegistered = Object.keys(users).length;
+    const onlineStatus = localStorage.getItem('currentUser') ? 1 : 0;
+
+    const totalRegisteredSpan = document.getElementById('totalRegisteredCount');
+    const onlineCountSpan = document.getElementById('onlineCount');
+
+    if (totalRegisteredSpan) {
+        totalRegisteredSpan.textContent = totalRegistered;
+    }
+    if (onlineCountSpan) {
+        onlineCountSpan.textContent = onlineStatus;
+    }
+}
+
+function showLogin() {
+  document.getElementById('loginPage').classList.remove('hidden');
+  document.getElementById('registerPage').classList.add('hidden');
+  document.getElementById('mainApp').classList.add('hidden');
+  document.getElementById('examCreator').classList.add('hidden');
+  document.getElementById('printArea').classList.add('hidden');
+  updateUserCounts();
+}
+
+function showRegister() {
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('registerPage').classList.remove('hidden');
+  updateUserCounts();
+}
+
+function registerUser() {
+  const username = document.getElementById('registerUsername').value.trim();
+  const password = document.getElementById('registerPassword').value.trim();
+  const pic = document.getElementById('registerPic').value.trim();
+  if (!username || !password) return alert("Username and password required");
+  if (users[username]) return alert("Username already exists.");
+  users[username] = { password, pic };
+  localStorage.setItem("users", JSON.stringify(users));
+  alert("Registered successfully!");
+  updateUserCounts();
+  showLogin();
+}
+
+function loginUser() {
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value.trim();
+  if (!users[username] || users[username].password !== password) {
+    alert("Invalid credentials");
+    return;
+  }
+  localStorage.setItem("currentUser", username);
+  loadProfile();
+}
+
+function loadProfile() {
+  const username = localStorage.getItem("currentUser");
+  const user = users[username];
+  if (!user) {
+      updateUserCounts();
+      return showLogin();
+  }
+  document.getElementById('profileName').textContent = username;
+  document.getElementById('profilePic').src = user.pic || 'https://via.placeholder.com/40';
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+  updateUserCounts();
+}
+
+function logoutUser() {
+  localStorage.removeItem("currentUser");
+  showLogin();
+}
+
+function showExamCreator() {
+  document.getElementById('mainApp').classList.add('hidden');
+  document.getElementById('examCreator').classList.remove('hidden');
+
+  // Reset for a new paper
+  questions = [];
+  document.getElementById('questionList').innerHTML = "";
+
+  // Clear input fields
+   document.getElementById('schoolName').value = "";
+   document.getElementById('className').value = "";
+   document.getElementById('subjectName').value = "";
+   document.getElementById('timeLimit').value = "";
+   document.getElementById('maxMarks').value = "";
+   document.getElementById('headerText').value = "";
+   document.getElementById('footerText').value = "";
+   document.getElementById('watermarkText').value = "";
+   document.getElementById('logoUpload').value = "";
+
+   document.getElementById('questionText').value = "";
+   document.getElementById('questionType').value = "MCQ";
+   document.getElementById('questionMarks').value = "";
+
+  document.getElementById('printArea').classList.add('hidden');
+  updateUserCounts();
+}
+
+function backToProfile() {
+  document.getElementById('examCreator').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+  document.getElementById('printArea').classList.add('hidden');
+  updateUserCounts();
+}
+
+// Function to add question
+function addQuestion() {
+  const text = document.getElementById('questionText').value.trim();
+  const type = document.getElementById('questionType').value;
+  const marks = document.getElementById('questionMarks').value.trim();
+
+  if (!text || marks === '' || isNaN(marks) || parseInt(marks) <= 0) {
+    alert("Enter valid question text and marks (must be a number > 0)");
+    return;
+  }
+
+  questions.push({ text, type, marks: parseInt(marks) });
+
+  const div = document.createElement('div');
+  div.className = "bg-white border p-2 shadow flex justify-between items-center";
+  // Using a simple filter for removal - doesn't handle identical question text perfectly
+  div.innerHTML = `<strong>${type}</strong>: ${text} (${marks} marks)
+    <button onclick="this.parentElement.remove(); removeQuestionFromList('${escape(text)}')" class="text-red-500 ml-2 text-sm">Delete</button>`;
+  document.getElementById('questionList').appendChild(div);
+  document.getElementById('questionText').value = "";
+  document.getElementById('questionMarks').value = "";
+}
+
+// Helper function to remove question from array (simple text match)
+function removeQuestionFromList(questionTextEncoded) {
+    const questionText = unescape(questionTextEncoded);
+    const initialLength = questions.length;
+    questions = questions.filter(q => q.text !== questionText);
+     if (questions.length === initialLength) {
+       //console.warn("Could not remove question by text, potential duplicate:", questionText);
+    }
+}
+
+
+function generateExamPaper() {
+  // Ensure printArea is visible before populating it for display on screen
+  document.getElementById('printArea').classList.remove('hidden');
+
+  // Populate header details from input fields into the spans
+  document.getElementById('examSchool').textContent = document.getElementById('schoolName').value;
+
+  // Populate the spans within the new structure
+  document.getElementById('examClass').textContent = document.getElementById('className').value;
+  document.getElementById('examSubject').textContent = document.getElementById('subjectName').value;
+  document.getElementById('examTime').textContent = document.getElementById('timeLimit').value;
+  document.getElementById('examMaxMarks').textContent = document.getElementById('maxMarks').value;
+
+  document.getElementById('examSession').textContent = document.getElementById('academicSession').value;
+  document.getElementById('examInstructions').textContent = document.getElementById('instructionText').value;
+
+
+  document.getElementById('examHeader').textContent = document.getElementById('headerText').value;
+  document.getElementById('examFooter').textContent = document.getElementById('footerText').value;
+  document.getElementById('examWatermark').textContent = document.getElementById('watermarkText').value;
+
+// === Apply Layout Options ===
+const layoutMap = {
+  A4: "210mm",
+  A5: "148mm"
+};
+const pageSize = document.getElementById('pageSize').value;
+const orientation = document.getElementById('pageOrientation').value;
+const fontSize = document.getElementById('pageFontSize').value;
+const borderToggle = document.getElementById('pageBorderToggle').value;
+
+const printArea = document.getElementById('printArea');
+printArea.style.width = orientation === 'landscape' ? '100%' : layoutMap[pageSize];
+printArea.classList.remove('text-sm', 'text-base', 'text-lg');
+printArea.classList.add(fontSize);
+printArea.style.border = borderToggle === 'yes' ? '4px solid red' : 'none';
+
+
+
+  // Handle Logo
+  const logoInput = document.getElementById('logoUpload');
+  const logo = document.getElementById('examLogo');
+  if (logoInput.files.length > 0) {
+    const reader = new FileReader();
+    reader.onload = () => logo.src = reader.result;
+    reader.readAsDataURL(logoInput.files[0]);
+    logo.style.display = 'block'; // Show logo if uploaded
+  } else {
+      logo.src = ''; // Clear logo src
+      logo.style.display = 'none'; // Hide logo element if no file
+  }
+
+  // Populate questions using the 'questions' array
+  const examQuestionsDiv = document.getElementById('examQuestions');
+  examQuestionsDiv.innerHTML = "";
+
+  if (questions.length === 0) {
+    examQuestionsDiv.innerHTML = "<p>No questions added to the paper.</p>";
+    const noQuestionsP = examQuestionsDiv.querySelector('p');
+    if (noQuestionsP) {
+      noQuestionsP.style.visibility = 'visible';
+      noQuestionsP.style.display = 'block';
+    }
+    return;
+  }
+
+
+  const grouped = {};
+  questions.forEach(q => {
+    if (!grouped[q.type]) grouped[q.type] = [];
+    grouped[q.type].push(q);
+  });
+
+  let index = 1;
+  Object.keys(grouped).forEach(type => {
+    const section = document.createElement('div');
+    section.className = 'mb-4';
+    section.innerHTML = `<h4 class="text-lg font-bold underline mb-2">${type} Questions</h4>`;
+
+    grouped[type].forEach(q => {
+      const qBlock = document.createElement('div');
+      qBlock.className = 'mb-2';
+      qBlock.innerHTML = `
+        <div class="flex justify-between">
+          <div><strong>${index++}.</strong> ${q.text}</div>
+          <div>[${q.marks}]</div>
+        </div>`;
+      section.appendChild(qBlock);
+    });
+    examQuestionsDiv.appendChild(section);
+  });
+
+
+  // Update counts immediately on page load
+  updateUserCounts();
+
+  // Check if a user is already logged in
+  if (localStorage.getItem("currentUser")) {
+    loadProfile(); // loadProfile will handle showing mainApp and updating counts
+  } else {
+    showLogin(); // showLogin will handle showing login page and updating counts
+  }
+}
+
+  document.getElementById('examTypeOutput').textContent = document.getElementById('examType').value;</script>
+<script>
+var quill = new Quill('#editor', {
+    theme: 'snow',
+    placeholder: 'Write your question here...',
+    modules: {
+      toolbar: [
+        [{ header: [1, 2, false] }],
+        ['bold', 'italic', 'underline'],
+        [{ 'font': [] }],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'align': [] }],
+        ['blockquote', 'code-block'],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        ['clean']
+      ]
+    }
+});
+
+function addQuestion() {
+  const html = quill.root.innerHTML.trim();
+  const type = document.getElementById('questionType').value;
+  const marks = document.getElementById('questionMarks').value.trim();
+
+  if (!html || html === '<p><br></p>' || marks === '' || isNaN(marks) || parseInt(marks) <= 0) {
+    alert("Enter valid question text and marks (must be a number > 0)");
+    return;
+  }
+
+  const section = document.getElementById('questionSection').value.trim();
+  const difficulty = document.getElementById('questionDifficulty').value;
+  questions.push({ text: html, type, marks: parseInt(marks), section, difficulty });
+
+  const div = document.createElement('div');
+  div.className = "bg-white border p-2 shadow flex justify-between items-center";
+  div.innerHTML = `<strong>${type}</strong>: ${html} (${marks} marks)
+    <button onclick="this.parentElement.remove(); removeQuestionFromList('${btoa(html)}')" class="text-red-500 ml-2 text-sm">Delete</button>`;
+  document.getElementById('questionList').appendChild(div);
+  quill.setText('');
+  document.getElementById('questionMarks').value = "";
+}
+
+function removeQuestionFromList(encodedText) {
+    const html = atob(encodedText);
+    const initialLength = questions.length;
+    questions = questions.filter(q => q.text !== html);
+}
+
+function updateTotalMarks() {
+  const total = questions.reduce((sum, q) => sum + (q.marks || 0), 0);
+  document.getElementById('totalMarksDisplay').textContent = 'Total Marks: ' + total;
+}
+</script><script>
+var instructionQuill = new Quill('#instructionEditor', {
+  theme: 'snow',
+  placeholder: 'Write instructions...',
+  modules: { toolbar: quill.options.modules.toolbar }
+});
+var headerQuill = new Quill('#headerEditor', {
+  theme: 'snow',
+  placeholder: 'Enter Header Text...',
+  modules: { toolbar: quill.options.modules.toolbar }
+});
+var footerQuill = new Quill('#footerEditor', {
+  theme: 'snow',
+  placeholder: 'Enter Footer Text...',
+  modules: { toolbar: quill.options.modules.toolbar }
+});
+
+// Overriding the generateExamPaper function to use formatted values
+const originalGenerateExamPaper = generateExamPaper;
+generateExamPaper = function() {
+  document.getElementById('printArea').classList.remove('hidden');
+  document.getElementById('examSchool').textContent = document.getElementById('schoolName').value;
+  document.getElementById('examClass').textContent = document.getElementById('className').value;
+  document.getElementById('examSubject').textContent = document.getElementById('subjectName').value;
+  document.getElementById('examTime').textContent = document.getElementById('timeLimit').value;
+  document.getElementById('examMaxMarks').textContent = document.getElementById('maxMarks').value;
+  document.getElementById('examSession').textContent = document.getElementById('academicSession').value;
+
+  document.getElementById('examInstructions').innerHTML = instructionQuill.root.innerHTML.trim();
+  document.getElementById('examHeader').innerHTML = headerQuill.root.innerHTML.trim();
+  document.getElementById('examFooter').innerHTML = footerQuill.root.innerHTML.trim();
+  document.getElementById('examWatermark').textContent = document.getElementById('watermarkText').value;
+
+// === Apply Layout Options ===
+const layoutMap = {
+  A4: "210mm",
+  A5: "148mm"
+};
+const pageSize = document.getElementById('pageSize').value;
+const orientation = document.getElementById('pageOrientation').value;
+const fontSize = document.getElementById('pageFontSize').value;
+const borderToggle = document.getElementById('pageBorderToggle').value;
+
+const printArea = document.getElementById('printArea');
+printArea.style.width = orientation === 'landscape' ? '100%' : layoutMap[pageSize];
+printArea.classList.remove('text-sm', 'text-base', 'text-lg');
+printArea.classList.add(fontSize);
+printArea.style.border = borderToggle === 'yes' ? '4px solid red' : 'none';
+
+
+  const logoInput = document.getElementById('logoUpload');
+  const logo = document.getElementById('examLogo');
+  if (logoInput.files.length > 0) {
+    const reader = new FileReader();
+    reader.onload = () => logo.src = reader.result;
+    reader.readAsDataURL(logoInput.files[0]);
+    logo.style.display = 'block';
+  } else {
+    logo.src = '';
+    logo.style.display = 'none';
+  }
+
+  const examQuestionsDiv = document.getElementById('examQuestions');
+  examQuestionsDiv.innerHTML = "";
+
+  if (questions.length === 0) {
+    examQuestionsDiv.innerHTML = "<p>No questions added to the paper.</p>";
+    const noQuestionsP = examQuestionsDiv.querySelector('p');
+    if (noQuestionsP) {
+      noQuestionsP.style.visibility = 'visible';
+      noQuestionsP.style.display = 'block';
+    }
+    return;
+  }
+
+  questions.forEach((q, i) => {
+    const p = document.createElement('p');
+    p.innerHTML = `<div class="flex justify-between"><div><strong>${i + 1}.</strong> ${q.text}</div><div>[${q.marks}]</div></div>`;
+    examQuestionsDiv.appendChild(p);
+  });
+};
+
+  document.getElementById('examTypeOutput').textContent = document.getElementById('examType').value;
+  const qrLink = document.getElementById('qrLink').value;
+  generateQRCode(qrLink);
+  document.getElementById('teacherNote').textContent = "Best of luck! Attempt all questions sincerely.";
+</script>
+<script>
+// === Added for saving questions locally ===
+function saveQuestionsToStorage() {
+  const username = localStorage.getItem("currentUser");
+  if (username) {
+    localStorage.setItem(`questions_${username}`, JSON.stringify(questions));
+  }
+}
+
+function loadSavedQuestions() {
+  const username = localStorage.getItem("currentUser");
+  if (username) {
+    const saved = localStorage.getItem(`questions_${username}`);
+    if (saved) {
+      questions = JSON.parse(saved);
+      questions.forEach(q => {
+        const div = document.createElement('div');
+        div.className = "bg-white border p-2 shadow flex justify-between items-center";
+        div.innerHTML = `<strong>${q.type}</strong>: ${q.text} (${q.marks} marks)
+          <button onclick="this.parentElement.remove(); removeQuestionFromList('${btoa(q.text)}')" class="text-red-500 ml-2 text-sm">Delete</button>`;
+        document.getElementById('questionList').appendChild(div);
+      });
+    }
+  }
+}
+
+// Patch addQuestion to save
+const originalAddQuestion = addQuestion;
+addQuestion = function() {
+  const html = quill.root.innerHTML.trim();
+  const type = document.getElementById('questionType').value;
+  const marks = document.getElementById('questionMarks').value.trim();
+
+  if (!html || html === '<p><br></p>' || marks === '' || isNaN(marks) || parseInt(marks) <= 0) {
+    alert("Enter valid question text and marks (must be a number > 0)");
+    return;
+  }
+
+  const section = document.getElementById('questionSection').value.trim();
+  const difficulty = document.getElementById('questionDifficulty').value;
+  questions.push({ text: html, type, marks: parseInt(marks), section, difficulty });
+  saveQuestionsToStorage();
+  updateTotalMarks();
+
+  const div = document.createElement('div');
+  div.className = "bg-white border p-2 shadow flex justify-between items-center";
+  div.innerHTML = `<strong>${type}</strong>: ${html} (${marks} marks)
+    <button onclick="this.parentElement.remove(); removeQuestionFromList('${btoa(html)}')" class="text-red-500 ml-2 text-sm">Delete</button>`;
+  document.getElementById('questionList').appendChild(div);
+  quill.setText('');
+  document.getElementById('questionMarks').value = "";
+}
+
+// Patch removeQuestionFromList to save
+const originalRemove = removeQuestionFromList;
+removeQuestionFromList = function(encodedText) {
+    const html = atob(encodedText);
+    questions = questions.filter(q => q.text !== html);
+    saveQuestionsToStorage();
+  updateTotalMarks();
+}
+
+// Patch showExamCreator to load saved questions
+const originalShowExamCreator = showExamCreator;
+showExamCreator = function() {
+  originalShowExamCreator();
+  loadSavedQuestions();
+}
+
+function updateTotalMarks() {
+  const total = questions.reduce((sum, q) => sum + (q.marks || 0), 0);
+  document.getElementById('totalMarksDisplay').textContent = 'Total Marks: ' + total;
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script><script>
+new Sortable(document.getElementById('questionList'), {
+  animation: 150,
+  onEnd: function () {
+    // Rearrange questions array based on new DOM order
+    const listItems = document.querySelectorAll('#questionList > div');
+    const newOrder = [];
+    listItems.forEach(div => {
+      const text = div.getAttribute('data-html');
+      const match = questions.find(q => btoa(q.text) === text);
+      if (match) newOrder.push(match);
+    });
+    questions = newOrder;
+    updateTotalMarks();
+  }
+});
+</script><script>
+function exportQuestions() {
+  const dataStr = JSON.stringify(questions, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "questions.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importQuestions() {
+  const fileInput = document.getElementById('importFile');
+  if (!fileInput.files.length) return alert("Please select a file");
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      questions = JSON.parse(e.target.result);
+      document.getElementById('questionList').innerHTML = "";
+      questions.forEach(q => {
+        const div = document.createElement('div');
+        div.className = "bg-white border p-2 shadow flex justify-between items-center";
+        div.setAttribute('data-html', btoa(q.text));
+        div.innerHTML = `<strong>${q.type}</strong>: ${q.text} (${q.marks} marks)
+          <button onclick="this.parentElement.remove(); removeQuestionFromList('${btoa(q.text)}')" class="text-red-500 ml-2 text-sm">Delete</button>`;
+        document.getElementById('questionList').appendChild(div);
+      });
+      updateTotalMarks();
+    } catch (err) {
+      alert("Invalid JSON file.");
+    }
+  };
+  reader.readAsText(fileInput.files[0]);
+}
+
+function saveToBank() {
+  const subject = document.getElementById('subjectName').value.trim();
+  const className = document.getElementById('className').value.trim();
+  if (!subject || !className) {
+    alert("Please enter both subject and class before saving.");
+    return;
+  }
+  localStorage.setItem(`bank_${className}_${subject}`, JSON.stringify(questions));
+  alert("Questions saved to bank.");
+}
+
+function loadFromBank() {
+  const subject = document.getElementById('subjectName').value.trim();
+  const className = document.getElementById('className').value.trim();
+  if (!subject || !className) {
+    alert("Please enter both subject and class to load questions.");
+    return;
+  }
+  const data = localStorage.getItem(`bank_${className}_${subject}`);
+  if (!data) {
+    alert("No questions found in bank for this Class and Subject.");
+    return;
+  }
+  questions = JSON.parse(data);
+  document.getElementById('questionList').innerHTML = "";
+  questions.forEach(q => {
+    const div = document.createElement('div');
+    div.className = "bg-white border p-2 shadow flex justify-between items-center";
+    div.setAttribute('data-html', btoa(q.text));
+    div.innerHTML = `<strong>${q.type}</strong>: ${q.text} (${q.marks} marks)
+      <button onclick="this.parentElement.remove(); removeQuestionFromList('${btoa(q.text)}')" class="text-red-500 ml-2 text-sm">Delete</button>`;
+    document.getElementById('questionList').appendChild(div);
+  });
+  updateTotalMarks();
+}
+</script><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script><script>
+let langList = ['en', 'hi', 'pa'];
+let langIndex = 0;
+
+function toggleLanguage() {
+  langIndex = (langIndex + 1) % langList.length;
+  const currentLang = langList[langIndex];
+
+  document.querySelectorAll('[data-en][data-hi][data-pa]').forEach(el => {
+    if (el.placeholder !== undefined && el.hasAttribute('placeholder')) {
+      el.setAttribute('placeholder', el.getAttribute(`data-${currentLang}`));
+    } else {
+      el.textContent = el.getAttribute(`data-${currentLang}`);
+    }
+  });
+}
+</script><script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script><script>
+function downloadAsWord() {
+  const content = document.getElementById('printArea').innerHTML;
+  const blob = new Blob(['<html><head><meta charset="utf-8"></head><body>' + content + '</body></html>'], {
+    type: "application/msword"
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "exam_paper.doc";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadAsPDF() {
+  const element = document.getElementById('printArea');
+  html2pdf().from(element).save('exam_paper.pdf');
+}
+
+function generateAIQuestion() {
+  const topic = document.getElementById('aiTopic').value.trim();
+  const type = document.getElementById('aiType').value;
+  const difficulty = document.getElementById('aiDifficulty').value;
+
+  if (!topic) {
+    alert("Please enter a topic.");
+    return;
+  }
+
+  const mockQuestion = {
+    MCQ: {
+      Easy: `What is 2 + 2?`,
+      Medium: `What is the result of 12 × 3?`,
+      Hard: `What is the derivative of x² + 3x + 5?`
+    },
+    Short: {
+      Easy: `Define a polygon.`,
+      Medium: `Explain Pythagoras theorem.`,
+      Hard: `Briefly explain integration by parts.`
+    },
+    Long: {
+      Easy: `Describe the water cycle in your own words.`,
+      Medium: `Explain Newton’s three laws with examples.`,
+      Hard: `Write a detailed note on photosynthesis with diagrams.`
+    }
+  };
+
+  const text = mockQuestion[type][difficulty];
+  const marks = type === "MCQ" ? 1 : type === "Short" ? 3 : 5;
+
+  questions.push({ text, type, marks, section: "AI", difficulty });
+  saveQuestionsToStorage();
+  updateTotalMarks();
+
+  const div = document.createElement('div');
+  div.className = "bg-white border p-2 shadow flex justify-between items-center";
+  div.setAttribute('data-html', btoa(text));
+  div.innerHTML = `<strong>${type}</strong>: ${text} (${marks} marks)
+    <button onclick="this.parentElement.remove(); removeQuestionFromList('${btoa(text)}')" class="text-red-500 ml-2 text-sm">Delete</button>`;
+  document.getElementById('questionList').appendChild(div);
+}
+</script><script>
+var adminQuill = new Quill('#adminEditor', {
+  theme: 'snow',
+  placeholder: 'Enter question text...',
+  modules: {
+    toolbar: [
+      [{ header: [1, 2, false] }],
+      ['bold', 'italic', 'underline'],
+      [{ 'color': [] }, { 'background': [] }],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      ['clean']
+    ]
+  }
+});
+
+function showAdminLogin() {
+  document.getElementById('adminLogin').classList.remove('hidden');
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('mainApp').classList.add('hidden');
+}
+
+function loginAdmin() {
+  const user = document.getElementById('adminUsername').value.trim();
+  const pass = document.getElementById('adminPassword').value.trim();
+  if (user === "admin" && pass === "admin123") {
+    localStorage.setItem("adminLoggedIn", "true");
+    loadAdminPanel();
+  } else {
+    alert("Invalid admin credentials");
+  }
+}
+
+function loadAdminPanel() {
+  document.getElementById('adminLogin').classList.add('hidden');
+  document.getElementById('adminPanel').classList.remove('hidden');
+  loadAdminQuestions();
+}
+
+function logoutAdmin() {
+  localStorage.removeItem("adminLoggedIn");
+  document.getElementById('adminPanel').classList.add('hidden');
+  showAdminLogin();
+}
+
+function addAdminQuestion() {
+  const text = adminQuill.root.innerHTML.trim();
+  const className = document.getElementById('adminClass').value.trim();
+  const subject = document.getElementById('adminSubject').value.trim();
+  const section = document.getElementById('adminSection').value.trim();
+  const type = document.getElementById('adminType').value;
+  const difficulty = document.getElementById('adminDifficulty').value;
+  const marks = parseInt(document.getElementById('adminMarks').value.trim());
+
+  if (!text || !className || !subject || !marks || isNaN(marks)) {
+    alert("Please fill all fields correctly.");
+    return;
+  }
+
+  const bank = JSON.parse(localStorage.getItem("adminBank") || "[]");
+  bank.push({ text, className, subject, section, type, difficulty, marks });
+  localStorage.setItem("adminBank", JSON.stringify(bank));
+  adminQuill.setText('');
+  document.getElementById('adminClass').value = '';
+  document.getElementById('adminSubject').value = '';
+  document.getElementById('adminSection').value = '';
+  document.getElementById('adminMarks').value = '';
+  loadAdminQuestions();
+}
+
+function loadAdminQuestions() {
+  const bank = JSON.parse(localStorage.getItem("adminBank") || "[]");
+  const container = document.getElementById('adminQuestionList');
+  container.innerHTML = "";
+  bank.forEach((q, i) => {
+    const div = document.createElement('div');
+    div.className = "bg-white p-2 border shadow";
+    div.innerHTML = `<div><strong>${q.type}</strong> [${q.difficulty}] (${q.marks} marks)</div>
+      <div>${q.text}</div>
+      <div class="text-sm text-gray-600">Class: ${q.className}, Subject: ${q.subject}, Section: ${q.section}</div>`;
+    container.appendChild(div);
+  });
+}
+
+// Auto-login check
+if (localStorage.getItem("adminLoggedIn") === "true") {
+  loadAdminPanel();
+}
+
+function deleteAdminQuestion(index) {
+  const bank = JSON.parse(localStorage.getItem("adminBank") || "[]");
+  bank.splice(index, 1);
+  localStorage.setItem("adminBank", JSON.stringify(bank));
+  loadAdminQuestions();
+}
+
+function editAdminQuestion(index) {
+  const bank = JSON.parse(localStorage.getItem("adminBank") || "[]");
+  const q = bank[index];
+  adminQuill.root.innerHTML = q.text;
+  document.getElementById('adminClass').value = q.className;
+  document.getElementById('adminSubject').value = q.subject;
+  document.getElementById('adminSection').value = q.section;
+  document.getElementById('adminType').value = q.type;
+  document.getElementById('adminDifficulty').value = q.difficulty;
+  document.getElementById('adminMarks').value = q.marks;
+  bank.splice(index, 1);
+  localStorage.setItem("adminBank", JSON.stringify(bank));
+  loadAdminQuestions();
+}
+
+function loadAdminQuestions() {
+  const bank = JSON.parse(localStorage.getItem("adminBank") || "[]");
+  const filterClass = document.getElementById('filterClass').value.trim().toLowerCase();
+  const filterSubject = document.getElementById('filterSubject').value.trim().toLowerCase();
+  const filterType = document.getElementById('filterType').value;
+  const filterDifficulty = document.getElementById('filterDifficulty').value;
+  const searchText = document.getElementById('searchText').value.trim().toLowerCase();
+
+  const filtered = bank.filter(q =>
+    (!filterClass || q.className.toLowerCase().includes(filterClass)) &&
+    (!filterSubject || q.subject.toLowerCase().includes(filterSubject)) &&
+    (!filterType || q.type === filterType) &&
+    (!filterDifficulty || q.difficulty === filterDifficulty) &&
+    (!searchText || q.text.toLowerCase().includes(searchText))
+  );
+
+  const container = document.getElementById('adminQuestionList');
+  container.innerHTML = "";
+  filtered.forEach((q, i) => {
+    const div = document.createElement('div');
+    div.className = "bg-white p-2 border shadow";
+    div.innerHTML = `
+      <div class="flex justify-between">
+        <div><strong>${q.type}</strong> [${q.difficulty}] (${q.marks} marks)</div>
+        <div>
+          <button onclick="editAdminQuestion(${i})" class="text-blue-500 text-sm mr-2">Edit</button>
+          <button onclick="deleteAdminQuestion(${i})" class="text-red-500 text-sm">Delete</button>
+        </div>
+      </div>
+      <div>${q.text}</div>
+      <div class="text-sm text-gray-600">Class: ${q.className}, Subject: ${q.subject}, Section: ${q.section}</div>`;
+    container.appendChild(div);
+  });
+}
+
+function openAdminBankSelector() {
+  document.getElementById("adminBankModal").classList.remove("hidden");
+  loadAdminBankForUser();
+}
+
+function closeAdminBankSelector() {
+  document.getElementById("adminBankModal").classList.add("hidden");
+}
+
+function loadAdminBankForUser() {
+  const bank = JSON.parse(localStorage.getItem("adminBank") || "[]");
+
+  const fClass = document.getElementById("userFilterClass").value.trim().toLowerCase();
+  const fSub = document.getElementById("userFilterSubject").value.trim().toLowerCase();
+  const fType = document.getElementById("userFilterType").value;
+  const fDiff = document.getElementById("userFilterDifficulty").value;
+
+  const filtered = bank.filter(q =>
+    (!fClass || q.className.toLowerCase().includes(fClass)) &&
+    (!fSub || q.subject.toLowerCase().includes(fSub)) &&
+    (!fType || q.type === fType) &&
+    (!fDiff || q.difficulty === fDiff)
+  );
+
+  const container = document.getElementById("adminBankList");
+  container.innerHTML = "";
+  filtered.forEach(q => {
+    const div = document.createElement("div");
+    div.className = "border p-2 bg-gray-50";
+    div.innerHTML = `
+      <div class="flex justify-between items-center">
+        <div><strong>${q.type}</strong> [${q.difficulty}] (${q.marks} marks)</div>
+        <button onclick='insertFromAdminBank(${JSON.stringify(q)})' class="bg-green-600 text-white px-2 py-1 rounded text-sm">Add</button>
+      </div>
+      <div>${q.text}</div>
+      <div class="text-sm text-gray-600">Class: ${q.className}, Subject: ${q.subject}, Section: ${q.section}</div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function insertFromAdminBank(q) {
+  questions.push(q);
+  saveQuestionsToStorage();
+  updateTotalMarks();
+
+  const div = document.createElement("div");
+  div.className = "bg-white border p-2 shadow flex justify-between items-center";
+  div.setAttribute("data-html", btoa(q.text));
+  div.innerHTML = `<strong>${q.type}</strong>: ${q.text} (${q.marks} marks)
+    <button onclick="this.parentElement.remove(); removeQuestionFromList('${btoa(q.text)}')" class="text-red-500 ml-2 text-sm">Delete</button>`;
+  document.getElementById("questionList").appendChild(div);
+}
+
+function exportAdminBank() {
+  const data = localStorage.getItem("adminBank") || "[]";
+  const blob = new Blob([data], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "admin_question_bank.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importAdminBank() {
+  const input = document.getElementById("importAdminFile");
+  if (!input.files.length) return alert("Please choose a JSON file.");
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) throw "Invalid format";
+      localStorage.setItem("adminBank", JSON.stringify(imported));
+      loadAdminQuestions();
+      alert("Admin Bank imported successfully.");
+    } catch (err) {
+      alert("Failed to import. Make sure it's a valid JSON array.");
+    }
+  };
+  reader.readAsText(input.files[0]);
+}
+
+function showAdminStats() {
+  const bank = JSON.parse(localStorage.getItem("adminBank") || "[]");
+  const total = bank.length;
+  const byClass = {};
+  const bySubject = {};
+  const byDifficulty = {};
+
+  bank.forEach(q => {
+    byClass[q.className] = (byClass[q.className] || 0) + 1;
+    bySubject[q.subject] = (bySubject[q.subject] || 0) + 1;
+    byDifficulty[q.difficulty] = (byDifficulty[q.difficulty] || 0) + 1;
+  });
+
+  const formatStat = (obj) => Object.entries(obj).map(([k, v]) => `${k}: ${v}`).join(", ");
+
+  const html = `
+    <p><strong>Total Questions:</strong> ${total}</p>
+    <p><strong>By Class:</strong> ${formatStat(byClass)}</p>
+    <p><strong>By Subject:</strong> ${formatStat(bySubject)}</p>
+    <p><strong>By Difficulty:</strong> ${formatStat(byDifficulty)}</p>
+  `;
+  document.getElementById("adminStats").innerHTML = html;
+}
+</script>
+<div class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" id="adminBankModal">
+<div class="bg-white w-full max-w-4xl p-6 rounded shadow-lg max-h-[90vh] overflow-y-auto">
+<div class="flex justify-between items-center mb-4">
+<h2 class="text-lg font-bold">Select Questions from Admin Bank</h2>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" onclick="closeAdminBankSelector()">Close</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-2 mb-2">
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="userFilterClass" placeholder="Class"/>
+<input class="border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 w-full" id="userFilterSubject" placeholder="Subject"/>
+<select class="border p-2" id="userFilterType">
+<option value="">All Types</option>
+<option value="MCQ">MCQ</option>
+<option value="Short">Short Answer</option>
+<option value="Long">Long Answer</option>
+<option value="Fill">Fill in the Blank</option>
+<option value="TrueFalse">True / False</option>
+</select>
+<select class="border p-2" id="userFilterDifficulty">
+<option value="">All Levels</option>
+<option value="Easy">Easy</option>
+<option value="Medium">Medium</option>
+<option value="Hard">Hard</option>
+</select>
+</div>
+<button class="px-4 py-2 rounded-xl shadow-md transition hover:scale-105 text-white bg-blue-600" onclick="loadAdminBankForUser()">Filter</button>
+<div class="space-y-2" id="adminBankList">
+<!-- Questions will be listed here -->
+</div>
+</div>
+</div>
+<script>
+// Splash screen timeout
+window.addEventListener("DOMContentLoaded", () => {
+  setTimeout(() => {
+    document.getElementById("splashScreen").style.display = "none";
+  }, 2500);
+});
+
+// Dark mode toggle
+function toggleTheme() {
+  const current = localStorage.getItem("theme");
+  if (current === "dark") {
+    document.documentElement.classList.remove("dark");
+    localStorage.setItem("theme", "light");
+  } else {
+    document.documentElement.classList.add("dark");
+    localStorage.setItem("theme", "dark");
+  }
+}
+
+// Load saved theme
+if (localStorage.getItem("theme") === "dark") {
+  document.documentElement.classList.add("dark");
+}
+</script><script>
+function saveTemplate() {
+  const template = {
+    schoolName: document.getElementById('schoolName').value,
+    className: document.getElementById('className').value,
+    subjectName: document.getElementById('subjectName').value,
+    timeLimit: document.getElementById('timeLimit').value,
+    maxMarks: document.getElementById('maxMarks').value,
+    examType: document.getElementById('examType').value,
+    watermarkText: document.getElementById('watermarkText').value,
+    academicSession: document.getElementById('academicSession').value
+  };
+  localStorage.setItem("savedTemplate", JSON.stringify(template));
+  alert("Template saved!");
+}
+
+function loadTemplate() {
+  const template = JSON.parse(localStorage.getItem("savedTemplate"));
+  if (!template) return alert("No template found.");
+  document.getElementById('schoolName').value = template.schoolName || "";
+  document.getElementById('className').value = template.className || "";
+  document.getElementById('subjectName').value = template.subjectName || "";
+  document.getElementById('timeLimit').value = template.timeLimit || "";
+  document.getElementById('maxMarks').value = template.maxMarks || "";
+  document.getElementById('examType').value = template.examType || "";
+  document.getElementById('watermarkText').value = template.watermarkText || "";
+  document.getElementById('academicSession').value = template.academicSession || "";
+  alert("Template loaded!");
+}
+
+function exportToExcel() {
+  if (!questions.length) return alert("No questions to export.");
+  let csv = 'Type,Section,Difficulty,Marks,Question\n';
+  questions.forEach(q => {
+    const cleanText = q.text.replace(/\n|\r|,/g, ' ').replace(/<[^>]+>/g, '');
+    csv += `${q.type},${q.section || ''},${q.difficulty || ''},${q.marks},"${cleanText}"\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'question_summary.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function generateMultipleSets() {
+  const count = parseInt(document.getElementById("paperSetCount").value);
+  if (!questions.length) return alert("Add questions first.");
+  let sets = {};
+  for (let i = 1; i <= count; i++) {
+    let shuffled = [...questions].sort(() => Math.random() - 0.5);
+    sets[`Set ${String.fromCharCode(64 + i)}`] = shuffled;
+  }
+  console.log("Generated Sets:", sets);
+  alert(count + " paper sets generated in console (Set A/B/C)");
+}
+
+function submitForApproval() {
+  document.getElementById("approvalStatus").textContent = "Status: Submitted for review";
+  alert("Submitted for admin approval.");
+}
+</script><script>
+async function generateWithAI() {
+  const topic = document.getElementById('aiTopic').value.trim();
+  const type = document.getElementById('aiType').value;
+  const key = document.getElementById('openaiKey').value.trim();
+  const status = document.getElementById('aiStatus');
+
+  if (!topic || !key) {
+    alert("Please enter topic and API key.");
+    return;
+  }
+
+  status.innerText = "Generating question...";
+  const prompt = `Generate a ${type} question on the topic: ${topic}`;
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + key
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 150
+      })
+    });
+
+    const data = await response.json();
+    const generated = data.choices?.[0]?.message?.content || "No result.";
+    document.getElementById('questionText').value = generated;
+    status.innerText = "AI question generated successfully!";
+  } catch (err) {
+    console.error(err);
+    status.innerText = "Failed to generate question.";
+  }
+}
+</script></body>
+</html>
